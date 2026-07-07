@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agent Reach · 给你的 AI Agent 装上互联网能力</title>
+<meta name="description" content="Agent Reach 是一个能力层，让你的 AI Agent 读推特、搜 Reddit、看 YouTube、刷小红书、读任意网页——一个 CLI，零 API 费用。" />
+<style>
+  :root {
+    --bg: #0b0b14;
+    --bg-soft: #13131f;
+    --card: #181826;
+    --border: #2a2a3d;
+    --text: #e8e8f0;
+    --muted: #9b9bb0;
+    --accent: #7c6cff;
+    --accent-2: #4fd1c5;
+    --accent-grad: linear-gradient(135deg, #7c6cff 0%, #4fd1c5 100%);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  .grad-text {
+    background: var(--accent-grad);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* nav */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    background: rgba(11,11,20,0.72);
+    border-bottom: 1px solid var(--border);
+  }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
+  .logo .eye {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--accent-grad);
+    display: grid; place-items: center; font-size: 1.2rem;
+  }
+  .nav-links { display: flex; gap: 26px; font-size: 0.95rem; }
+  .nav-links a { color: var(--muted); transition: color .2s; }
+  .nav-links a:hover { color: var(--text); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 0.95rem;
+    background: var(--accent-grad); color: #0b0b14; border: none; cursor: pointer;
+    transition: transform .15s, box-shadow .2s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(124,108,255,.35); }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn.ghost:hover { border-color: var(--accent); box-shadow: none; }
+
+  /* hero */
+  header { padding: 96px 0 72px; text-align: center; position: relative; overflow: hidden; }
+  header::before {
+    content: ""; position: absolute; inset: -40% 0 auto 0; height: 600px;
+    background: radial-gradient(closest-side, rgba(124,108,255,.22), transparent);
+    z-index: -1;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: 999px;
+    font-size: 0.85rem; color: var(--muted); margin-bottom: 26px;
+  }
+  h1 { font-size: clamp(2.4rem, 6vw, 4rem); line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
+  .sub { font-size: clamp(1.05rem, 2.4vw, 1.35rem); color: var(--muted); margin: 22px auto 0; max-width: 720px; }
+  .hero-cta { margin-top: 38px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .cmd {
+    margin: 30px auto 0; max-width: 640px;
+    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92rem;
+  }
+  .cmd code { color: var(--accent-2); overflow-x: auto; white-space: nowrap; }
+  .copy { background: var(--card); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 0.8rem; white-space: nowrap; }
+  .copy:hover { color: var(--text); border-color: var(--accent); }
+
+  /* stats */
+  .stats { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 54px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 26px; min-width: 150px; }
+  .stat .n { font-size: 1.7rem; font-weight: 800; }
+  .stat .l { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+
+  /* sections */
+  section { padding: 72px 0; }
+  .sec-head { text-align: center; margin-bottom: 48px; }
+  .sec-head h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 800; }
+  .sec-head p { color: var(--muted); margin-top: 12px; max-width: 640px; margin-inline: auto; }
+
+  /* pain grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+  .pain {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px;
+    display: flex; gap: 14px; align-items: flex-start; transition: border-color .2s, transform .2s;
+  }
+  .pain:hover { border-color: var(--accent); transform: translateY(-3px); }
+  .pain .ico { font-size: 1.5rem; line-height: 1; }
+  .pain .txt { font-size: 0.95rem; }
+  .pain .txt b { color: var(--accent-2); }
+
+  /* platforms */
+  .plat { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .plat .top { display: flex; align-items: center; justify-content: space-between; }
+  .plat .name { font-weight: 700; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+  .tag { font-size: 0.72rem; padding: 3px 9px; border-radius: 999px; font-weight: 600; }
+  .tag.ok { background: rgba(79,209,197,.15); color: var(--accent-2); }
+  .tag.cfg { background: rgba(124,108,255,.15); color: var(--accent); }
+  .plat .desc { color: var(--muted); font-size: 0.88rem; margin-top: 10px; }
+
+  /* philosophy */
+  .phil { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 16px; padding: 34px; }
+  .phil h3 { font-size: 1.3rem; margin-bottom: 10px; }
+  .phil p { color: var(--muted); }
+  .route { margin-top: 20px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; color: var(--accent-2); background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow-x: auto; }
+
+  /* security */
+  .sec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 18px; }
+  .sec-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+  .sec-card .ico { font-size: 1.4rem; }
+  .sec-card h4 { margin: 8px 0 6px; font-size: 1.02rem; }
+  .sec-card p { color: var(--muted); font-size: 0.88rem; }
+
+  /* footer */
+  footer { border-top: 1px solid var(--border); padding: 48px 0; color: var(--muted); font-size: 0.9rem; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 24px; justify-content: space-between; align-items: center; }
+  footer a:hover { color: var(--text); }
+  .links { display: flex; gap: 20px; flex-wrap: wrap; }
+
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    header { padding: 64px 0 48px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="logo"><span class="eye">👁️</span> Agent Reach</div>
+    <div class="nav-links">
+      <a href="#why">为什么</a>
+      <a href="#platforms">支持平台</a>
+      <a href="#start">快速上手</a>
+      <a href="#philosophy">设计理念</a>
+      <a href="#security">安全性</a>
+    </div>
+    <a class="btn" href="https://github.com/Panniantong/Agent-Reach" target="_blank" rel="noopener">GitHub ★</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="hero-badge">🚀 当下最稳的接入方式，替你选好、装好、体检好</div>
+    <h1>给你的 AI Agent<br><span class="grad-text">一键装上互联网能力</span></h1>
+    <p class="sub">读推特、搜 Reddit、看 YouTube、刷小红书、读任意网页——一个 CLI，零 API 费用。让 Agent 真正"看得见"整个互联网。</p>
+    <div class="hero-cta">
+      <a class="btn" href="#start">⚡ 30 秒上手</a>
+      <a class="btn ghost" href="https://github.com/Panniantong/Agent-Reach" target="_blank" rel="noopener">📖 查看文档</a>
+    </div>
+    <div class="cmd">
+      <code id="install-cmd">帮我安装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md</code>
+      <button class="copy" onclick="copyCmd()">复制</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n grad-text">52k+</div><div class="l">GitHub Stars</div></div>
+      <div class="stat"><div class="n grad-text">15+</div><div class="l">支持平台</div></div>
+      <div class="stat"><div class="n grad-text">¥0</div><div class="l">API 费用</div></div>
+      <div class="stat"><div class="n grad-text">100%</div><div class="l">开源免费</div></div>
+    </div>
+  </div>
+</header>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>为什么需要 Agent Reach？</h2>
+      <p>AI Agent 能写代码、改文档、管项目——但你让它去网上找点东西，它就抓瞎了。</p>
+    </div>
+    <div class="grid">
+      <div class="pain"><span class="ico">📺</span><span class="txt">"看看这个 YouTube 教程讲了什么" → <b>拿不到字幕</b></span></div>
+      <div class="pain"><span class="ico">🐦</span><span class="txt">"搜一下推特上怎么评价这产品" → <b>Twitter API 要付费</b></span></div>
+      <div class="pain"><span class="ico">📖</span><span class="txt">"去 Reddit 看有没有人遇到同样 bug" → <b>403 被封</b></span></div>
+      <div class="pain"><span class="ico">📕</span><span class="txt">"看看小红书上这个品口碑" → <b>必须登录才打得开</b></span></div>
+      <div class="pain"><span class="ico">🔍</span><span class="txt">"网上搜下最新 LLM 框架对比" → <b>没有好用的免费搜索</b></span></div>
+      <div class="pain"><span class="ico">🌐</span><span class="txt">"看看这个网页写了啥" → <b>抓回一堆 HTML 标签</b></span></div>
+    </div>
+  </div>
+</section>
+
+<section id="platforms" style="background:var(--bg-soft);">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>支持的平台</h2>
+      <p>零配置即可用，部分平台登录后解锁更多能力。直接告诉 Agent「帮我配 XXX」即可。</p>
+    </div>
+    <div class="grid">
+      <div class="plat"><div class="top"><span class="name">🌐 网页</span><span class="tag ok">零配置</span></div><div class="desc">阅读任意网页，无需配置</div></div>
+      <div class="plat"><div class="top"><span class="name">📺 YouTube</span><span class="tag ok">零配置</span></div><div class="desc">字幕提取 + 视频搜索</div></div>
+      <div class="plat"><div class="top"><span class="name">📡 RSS</span><span class="tag ok">零配置</span></div><div class="desc">阅读任意 RSS/Atom 源</div></div>
+      <div class="plat"><div class="top"><span class="name">🔍 全网搜索</span><span class="tag cfg">自动配置</span></div><div class="desc">语义搜索，MCP 接入免 Key</div></div>
+      <div class="plat"><div class="top"><span class="name">📦 GitHub</span><span class="tag ok">零配置</span></div><div class="desc">读公开仓库 + 搜索</div></div>
+      <div class="plat"><div class="top"><span class="name">🐦 Twitter/X</span><span class="tag cfg">登录解锁</span></div><div class="desc">搜索、时间线、长文</div></div>
+      <div class="plat"><div class="top"><span class="name">📺 B站</span><span class="tag ok">零配置</span></div><div class="desc">搜索 + 详情（bili-cli，无需登录）</div></div>
+      <div class="plat"><div class="top"><span class="name">📕 小红书</span><span class="tag cfg">登录解锁</span></div><div class="desc">搜索、阅读、评论</div></div>
+      <div class="plat"><div class="top"><span class="name">📖 Reddit</span><span class="tag cfg">登录解锁</span></div><div class="desc">搜索 + 读帖子和评论</div></div>
+      <div class="plat"><div class="top"><span class="name">💻 V2EX</span><span class="tag ok">零配置</span></div><div class="desc">热门、节点、帖子详情</div></div>
+      <div class="plat"><div class="top"><span class="name">📈 雪球</span><span class="tag cfg">登录解锁</span></div><div class="desc">股票行情、搜索、热门</div></div>
+      <div class="plat"><div class="top"><span class="name">🎙️ 小宇宙</span><span class="tag cfg">登录解锁</span></div><div class="desc">播客音频转文字</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="start">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>快速上手</h2>
+      <p>复制下面这句话给你的 AI Agent（Claude Code、OpenClaw、Cursor 等），就这一步。</p>
+    </div>
+    <div class="cmd" style="max-width:760px;">
+      <code id="start-cmd">帮我安装 Agent Reach：https://raw.githubusercontent.com/Panniantong/agent-reach/main/docs/install.md</code>
+      <button class="copy" onclick="copyCmd('start-cmd')">复制</button>
+    </div>
+    <p style="text-align:center;color:var(--muted);margin-top:22px;">
+      Agent 会自己完成剩下的所有事情：安装 CLI、配置搜索、注册 SKILL、体检环境。<br>
+      装好后一条 <code style="color:var(--accent-2)">agent-reach doctor</code> 告诉你每个渠道的状态。
+    </p>
+    <div class="grid" style="margin-top:34px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));">
+      <div class="sec-card"><div class="ico">💰</div><h4>完全免费</h4><p>所有工具开源、所有 API 免费。本地电脑不需要代理。</p></div>
+      <div class="sec-card"><div class="ico">🔒</div><h4>隐私安全</h4><p>Cookie 只存在你本地，不上传不外传。代码完全开源可审查。</p></div>
+      <div class="sec-card"><div class="ico">🔄</div><h4>持续换代</h4><p>每个平台「首选 + 备选」多后端路由，失效自动切换，你无感。</p></div>
+      <div class="sec-card"><div class="ico">🤖</div><h4>兼容所有 Agent</h4><p>Claude Code、OpenClaw、Cursor、Windsurf……任何能跑命令行的 Agent。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="philosophy" style="background:var(--bg-soft);">
+  <div class="wrap">
+    <div class="phil">
+      <h3>设计理念：一个<span class="grad-text">能力层</span>，不是又一个工具</h3>
+      <p>Agent Reach 比任何具体实现高一层——负责<b style="color:var(--text)">选型、安装、体检、路由</b>，不负责底层读取本身。读取由 Agent 直接调用上游工具完成，没有包装层。换接入方式 = 调整列表顺序，不是重写代码。</p>
+      <div class="route">channels/
+├── web.py        → Jina Reader
+├── twitter.py    → twitter-cli ▸ OpenCLI ▸ bird
+├── youtube.py    → yt-dlp
+├── github.py     → gh CLI
+├── bilibili.py   → bili-cli ▸ OpenCLI ▸ 搜索 API
+├── reddit.py     → OpenCLI ▸ rdt-cli
+├── xiaohongshu.py→ OpenCLI ▸ xiaohongshu-mcp ▸ xhs-cli
+├── linkedin.py   → linkedin-mcp ▸ Jina Reader
+└── rss.py        → feedparser</div>
+    </div>
+  </div>
+</section>
+
+<section id="security">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>安全性</h2>
+      <p>在设计上重视安全：凭据本地存储、安全模式、完全开源、Dry Run 预览。</p>
+    </div>
+    <div class="sec-grid">
+      <div class="sec-card"><div class="ico">🔒</div><h4>凭据本地存储</h4><p>Cookie / Token 只存本机 ~/.agent-reach/config.yaml，权限 600，不上传。</p></div>
+      <div class="sec-card"><div class="ico">🛡️</div><h4>安全模式</h4><p>--safe 不会自动改系统，只列出需要什么，由你决定。</p></div>
+      <div class="sec-card"><div class="ico">👀</div><h4>完全开源</h4><p>代码透明可审查，所有依赖也是开源项目。</p></div>
+      <div class="sec-card"><div class="ico">🔍</div><h4>Dry Run</h4><p>--dry-run 预览所有操作，不做任何改动。</p></div>
+    </div>
+    <p style="text-align:center;color:var(--muted);margin-top:24px;font-size:0.9rem;">
+      ⚠️ 用 Cookie 登录的平台（Twitter、小红书等）存在被平台检测封号的风险，请使用<b style="color:var(--accent-2)">专用小号</b>，不要用主账号。
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <div class="logo" style="margin-bottom:8px;"><span class="eye">👁️</span> Agent Reach</div>
+      <div>MIT License · 为 Web 4.0 基建贡献一份力量</div>
+    </div>
+    <div class="links">
+      <a href="https://github.com/Panniantong/Agent-Reach" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/Panniantong/Agent-Reach/issues" target="_blank" rel="noopener">Issues</a>
+      <a href="https://github.com/Panniantong/Agent-Reach/blob/main/docs/install.md" target="_blank" rel="noopener">安装文档</a>
+      <a href="https://github.com/Panniantong/Agent-Reach/blob/main/docs/README_en.md" target="_blank" rel="noopener">English</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function copyCmd(id) {
+    var sel = id ? document.getElementById(id) : document.getElementById('install-cmd');
+    var text = sel.innerText;
+    navigator.clipboard.writeText(text).then(function(){
+      var btn = sel.parentElement.querySelector('.copy');
+      var old = btn.innerText; btn.innerText = '已复制 ✓';
+      setTimeout(function(){ btn.innerText = old; }, 1500);
+    });
+  }
+</script>
+</body>
+</html>
